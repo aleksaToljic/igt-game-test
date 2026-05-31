@@ -1,3 +1,4 @@
+import { gsap } from "gsap";
 import { Container, Graphics, Text } from "pixi.js";
 import { GAME_CONFIG } from "../../config/gameConfig";
 import { formatCents } from "../../utils/money";
@@ -10,6 +11,7 @@ const PADDING = 22;
 const CAPTION_COLOR = 0x8a93a6;
 const WIN_COLOR = 0xfde047;
 const NEUTRAL_COLOR = 0xf4f4f5;
+const COUNT_UP_DURATION = 0.6;
 
 export interface ControlPanelCallbacks {
   onSpin: () => void;
@@ -23,6 +25,7 @@ export class ControlPanel extends Container {
   private readonly win: StatDisplay;
   private readonly betSelector: BetSelector;
   private readonly spinButton: SpinButton;
+  private readonly winProxy = { value: 0 };
 
   constructor(width: number, callbacks: ControlPanelCallbacks) {
     super();
@@ -72,8 +75,22 @@ export class ControlPanel extends Container {
   }
 
   setWin(cents: number): void {
+    gsap.killTweensOf(this.winProxy);
+    this.winProxy.value = cents;
     this.win.setValue(formatCents(cents));
     this.win.setValueColor(cents > 0 ? WIN_COLOR : NEUTRAL_COLOR);
+  }
+
+  countWin(cents: number): void {
+    gsap.killTweensOf(this.winProxy);
+    this.winProxy.value = 0;
+    this.win.setValueColor(cents > 0 ? WIN_COLOR : NEUTRAL_COLOR);
+    gsap.to(this.winProxy, {
+      value: cents,
+      duration: COUNT_UP_DURATION,
+      ease: "power1.out",
+      onUpdate: () => this.win.setValue(formatCents(Math.round(this.winProxy.value))),
+    });
   }
 
   setEnabled(enabled: boolean): void {

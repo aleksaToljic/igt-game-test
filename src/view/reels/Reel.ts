@@ -48,6 +48,14 @@ export class Reel extends Container {
     this.layoutCells();
   }
 
+  visibleSymbol(row: number): SymbolView | undefined {
+    return this.cells[BUFFER_ROWS + row];
+  }
+
+  visibleSymbols(): SymbolView[] {
+    return this.cells.slice(BUFFER_ROWS, BUFFER_ROWS + GAME_CONFIG.rowCount);
+  }
+
   startSpin(): void {
     if (this.phase !== "idle" && this.phase !== "done") {
       return;

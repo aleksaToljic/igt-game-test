@@ -8,6 +8,7 @@ export interface SpinTiming {
   decelerateMs: number;
   bounceMs: number;
   spinSpeed: number;
+  winPresentMs: number;
 }
 
 export interface GameConfig {
@@ -163,6 +164,7 @@ export const GAME_CONFIG: GameConfig = {
     decelerateMs: 600,
     bounceMs: 180,
     spinSpeed: 3.2,
+    winPresentMs: 1700,
   },
 };
 

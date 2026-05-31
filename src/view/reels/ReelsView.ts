@@ -1,6 +1,9 @@
 import { Container, Graphics } from "pixi.js";
 import { GAME_CONFIG } from "../../config/gameConfig";
 import type { SymbolId } from "../../config/symbols";
+import type { WinLineDTO } from "../../server/dto";
+import { PulseWinAnimation } from "../win/PulseWinAnimation";
+import { WinPresenter } from "../win/WinPresenter";
 import { Reel } from "./Reel";
 
 const FRAME_PADDING = 14;
@@ -12,6 +15,8 @@ export class ReelsView extends Container {
   private readonly reelArea = new Container();
   private readonly frame = new Graphics();
   private readonly windowMask = new Graphics();
+  private readonly winLines = new Graphics();
+  private readonly winPresenter: WinPresenter;
   private readonly pendingStops: number[] = [];
 
   constructor(grid: readonly (readonly SymbolId[])[]) {
@@ -29,13 +34,17 @@ export class ReelsView extends Container {
       this.reels.push(reelView);
       this.reelArea.addChild(reelView);
     }
+    this.reelArea.addChild(this.winLines);
 
     this.windowMask.roundRect(0, 0, this.contentWidth, this.contentHeight, 8).fill(0xffffff);
     this.reelArea.mask = this.windowMask;
+
+    this.winPresenter = new WinPresenter(this.reels, this.winLines, new PulseWinAnimation());
   }
 
   startSpin(): void {
     this.clearPendingStops();
+    this.winPresenter.clear();
     for (const reel of this.reels) {
       reel.startSpin();
     }
@@ -59,6 +68,14 @@ export class ReelsView extends Container {
       }, index * GAME_CONFIG.timing.reelStopStaggerMs);
       this.pendingStops.push(timer);
     });
+  }
+
+  presentWins(wins: readonly WinLineDTO[]): void {
+    this.winPresenter.present(wins);
+  }
+
+  clearWins(): void {
+    this.winPresenter.clear();
   }
 
   update(deltaMs: number): void {

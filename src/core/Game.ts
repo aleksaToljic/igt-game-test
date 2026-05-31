@@ -1,18 +1,21 @@
 import { GAME_CONFIG, initialGrid } from "../config/gameConfig";
 import type { SymbolId } from "../config/symbols";
 import type { IGameServer } from "../server/IGameServer";
-import type { SpinResponseDTO } from "../server/dto";
+import type { SpinResponseDTO, WinLineDTO } from "../server/dto";
 import { GameStateMachine } from "./GameStateMachine";
 import { Wallet } from "./Wallet";
 
 export interface ReelsController {
   startSpin(): void;
   stop(grid: readonly (readonly SymbolId[])[], onAllStopped: () => void): void;
+  presentWins(wins: readonly WinLineDTO[]): void;
+  clearWins(): void;
 }
 
 export interface GameControls {
   setBalance(cents: number): void;
   setWin(cents: number): void;
+  countWin(cents: number): void;
   setEnabled(enabled: boolean): void;
 }
 
@@ -23,6 +26,7 @@ export class Game {
   private readonly wallet: Wallet;
   private readonly machine = new GameStateMachine();
   private stopTimer: ReturnType<typeof setTimeout> | undefined;
+  private presentTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(server: IGameServer, reels: ReelsController, controls: GameControls) {
     this.server = server;
@@ -48,6 +52,7 @@ export class Game {
     if (!this.machine.canEnter("spinning") || !this.wallet.canAfford()) {
       return;
     }
+    this.clearTimers();
     this.machine.enter("spinning");
     this.wallet.debitBet();
     this.controls.setBalance(this.wallet.getBalanceCents());
@@ -64,7 +69,6 @@ export class Game {
 
   private scheduleStop(response: SpinResponseDTO, startedAt: number): void {
     const remaining = GAME_CONFIG.timing.minSpinMs - (performance.now() - startedAt);
-    this.clearStopTimer();
     this.stopTimer = setTimeout(
       () => {
         this.machine.enter("stopping");
@@ -77,16 +81,25 @@ export class Game {
   private onReelsStopped(response: SpinResponseDTO): void {
     this.wallet.setBalanceCents(response.balanceCents);
     this.controls.setBalance(this.wallet.getBalanceCents());
-    this.controls.setWin(response.totalWinCents);
+
     if (response.totalWinCents > 0) {
       this.machine.enter("presenting");
+      this.controls.countWin(response.totalWinCents);
+      this.reels.presentWins(response.wins);
+      this.presentTimer = setTimeout(() => {
+        this.reels.clearWins();
+        this.machine.enter("idle");
+        this.controls.setEnabled(true);
+      }, GAME_CONFIG.timing.winPresentMs);
+      return;
     }
+
     this.machine.enter("idle");
     this.controls.setEnabled(true);
   }
 
   private recover(): void {
-    this.clearStopTimer();
+    this.clearTimers();
     this.wallet.setBalanceCents(this.server.getBalanceCents());
     this.controls.setBalance(this.wallet.getBalanceCents());
     this.machine.enter("stopping");
@@ -96,10 +109,14 @@ export class Game {
     });
   }
 
-  private clearStopTimer(): void {
+  private clearTimers(): void {
     if (this.stopTimer !== undefined) {
       clearTimeout(this.stopTimer);
       this.stopTimer = undefined;
+    }
+    if (this.presentTimer !== undefined) {
+      clearTimeout(this.presentTimer);
+      this.presentTimer = undefined;
     }
   }
 }
