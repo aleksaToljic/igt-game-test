@@ -17,6 +17,7 @@ export class BetSelector extends Container {
   private readonly valueText: Text;
   private readonly arrow: Text;
   private readonly list = new Container();
+  private readonly rowBackgrounds: Graphics[] = [];
   private isOpen = false;
 
   constructor(
@@ -83,6 +84,9 @@ export class BetSelector extends Container {
     this.isOpen = false;
     this.list.visible = false;
     this.arrow.text = "▼";
+    for (const rowBackground of this.rowBackgrounds) {
+      rowBackground.tint = 0xffffff;
+    }
   }
 
   private select(index: number): void {
@@ -105,11 +109,19 @@ export class BetSelector extends Container {
 
   private buildList(): void {
     const listHeight = this.levels.length * ROW_HEIGHT;
+
+    const backdrop = new Graphics();
+    backdrop.rect(-5000, -5000, 10000, 10000).fill({ color: 0x000000, alpha: 0.001 });
+    backdrop.eventMode = "static";
+    backdrop.on("pointertap", () => this.close());
+    this.list.addChild(backdrop);
+
     const panel = new Graphics();
     panel
       .roundRect(0, 0, WIDTH, listHeight, 12)
       .fill(0x10162b)
       .stroke({ width: 2, color: 0x2b3556 });
+    panel.eventMode = "static";
     this.list.addChild(panel);
 
     this.levels.forEach((level, index) => {
@@ -117,6 +129,7 @@ export class BetSelector extends Container {
       row.y = index * ROW_HEIGHT;
       const rowBackground = new Graphics();
       rowBackground.roundRect(4, 2, WIDTH - 8, ROW_HEIGHT - 4, 8).fill(ROW_COLOR);
+      this.rowBackgrounds.push(rowBackground);
       const text = new Text({
         text: formatCents(level),
         style: { fill: 0xf4f4f5, fontFamily: "Arial, sans-serif", fontSize: 18, fontWeight: "700" },
