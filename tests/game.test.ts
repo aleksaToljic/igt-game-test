@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SymbolId } from "../src/config/symbols";
-import { Game, type GameControls, type ReelsController } from "../src/core/Game";
+import {
+  Game,
+  type GameControls,
+  type ReelsController,
+  type WinCelebration,
+} from "../src/core/Game";
 import type { IGameServer } from "../src/server/IGameServer";
 import type { SpinRequestDTO, SpinResponseDTO, WinLineDTO } from "../src/server/dto";
 
@@ -52,6 +57,19 @@ class FakeReels implements ReelsController {
   }
 }
 
+class FakeCelebration implements WinCelebration {
+  bigWinCents: number | undefined;
+  cleared = false;
+
+  celebrateBigWin(amountCents: number): void {
+    this.bigWinCents = amountCents;
+  }
+
+  clear(): void {
+    this.cleared = true;
+  }
+}
+
 class FakeServer implements IGameServer {
   requests = 0;
 
@@ -75,8 +93,32 @@ class FakeServer implements IGameServer {
   }
 }
 
-function losingResponse(balanceCents: number): SpinResponseDTO {
-  return { grid: [[0, 0, 0]], wins: [], totalWinCents: 0, balanceCents };
+function lineWin(amountCents: number): WinLineDTO {
+  return {
+    lineIndex: 0,
+    symbol: 0,
+    matchCount: 3,
+    positions: [
+      { reel: 0, row: 1 },
+      { reel: 1, row: 1 },
+      { reel: 2, row: 1 },
+    ],
+    amountCents,
+  };
+}
+
+function response(totalWinCents: number, balanceCents: number): SpinResponseDTO {
+  const wins = totalWinCents > 0 ? [lineWin(totalWinCents)] : [];
+  return { grid: [[0, 0, 0]], wins, totalWinCents, balanceCents };
+}
+
+function setup(server: IGameServer) {
+  const reels = new FakeReels();
+  const controls = new FakeControls();
+  const celebration = new FakeCelebration();
+  const game = new Game(server, reels, controls, celebration);
+  game.start();
+  return { game, reels, controls, celebration };
 }
 
 describe("Game", () => {
@@ -88,31 +130,10 @@ describe("Game", () => {
     vi.useRealTimers();
   });
 
-  it("settles a winning spin: counts up the win, presents and then clears it", async () => {
-    const wins: WinLineDTO[] = [
-      {
-        lineIndex: 0,
-        symbol: 0,
-        matchCount: 3,
-        positions: [
-          { reel: 0, row: 1 },
-          { reel: 1, row: 1 },
-          { reel: 2, row: 1 },
-        ],
-        amountCents: 500,
-      },
-    ];
-    const response: SpinResponseDTO = {
-      grid: [[0, 0, 0]],
-      wins,
-      totalWinCents: 500,
-      balanceCents: 10_400,
-    };
-    const server = new FakeServer(10_000, response);
-    const reels = new FakeReels();
-    const controls = new FakeControls();
-    const game = new Game(server, reels, controls);
-    game.start();
+  it("settles a big winning spin: counts up, presents, celebrates and clears", async () => {
+    const { game, reels, controls, celebration } = setup(
+      new FakeServer(10_000, response(500, 10_400)),
+    );
 
     game.spin();
     expect(reels.startCount).toBe(1);
@@ -123,31 +144,41 @@ describe("Game", () => {
     expect(controls.balanceCents).toBe(10_400);
     expect(controls.winCents).toBe(500);
     expect(reels.presentedWins?.length).toBe(1);
+    expect(celebration.bigWinCents).toBe(500);
     expect(reels.cleared).toBe(true);
+    expect(celebration.cleared).toBe(true);
     expect(controls.enabled).toBe(true);
   });
 
-  it("settles a losing spin: win is zero and controls re-enable", async () => {
-    const server = new FakeServer(10_000, losingResponse(9_900));
-    const reels = new FakeReels();
-    const controls = new FakeControls();
-    const game = new Game(server, reels, controls);
-    game.start();
+  it("presents a small win without a big-win celebration", async () => {
+    const { game, reels, controls, celebration } = setup(
+      new FakeServer(10_000, response(100, 10_000)),
+    );
+
+    game.spin();
+    await vi.runAllTimersAsync();
+    expect(controls.winCents).toBe(100);
+    expect(reels.presentedWins?.length).toBe(1);
+    expect(celebration.bigWinCents).toBeUndefined();
+    expect(controls.enabled).toBe(true);
+  });
+
+  it("settles a losing spin: no win, no celebration, controls re-enable", async () => {
+    const { game, reels, controls, celebration } = setup(
+      new FakeServer(10_000, response(0, 9_900)),
+    );
 
     game.spin();
     await vi.runAllTimersAsync();
     expect(controls.winCents).toBe(0);
     expect(controls.balanceCents).toBe(9_900);
     expect(reels.presentedWins).toBeUndefined();
+    expect(celebration.bigWinCents).toBeUndefined();
     expect(controls.enabled).toBe(true);
   });
 
   it("recovers from a server error: refunds the balance and re-enables", async () => {
-    const server = new FakeServer(10_000, losingResponse(0), true);
-    const reels = new FakeReels();
-    const controls = new FakeControls();
-    const game = new Game(server, reels, controls);
-    game.start();
+    const { game, reels, controls } = setup(new FakeServer(10_000, response(0, 0), true));
 
     game.spin();
     await vi.runAllTimersAsync();
@@ -157,11 +188,8 @@ describe("Game", () => {
   });
 
   it("ignores a second spin until the first returns to idle", async () => {
-    const server = new FakeServer(10_000, losingResponse(9_900));
-    const reels = new FakeReels();
-    const controls = new FakeControls();
-    const game = new Game(server, reels, controls);
-    game.start();
+    const server = new FakeServer(10_000, response(0, 9_900));
+    const { game, reels } = setup(server);
 
     game.spin();
     game.spin();
@@ -171,11 +199,8 @@ describe("Game", () => {
   });
 
   it("does not spin when the bet exceeds the balance", () => {
-    const server = new FakeServer(50, losingResponse(50));
-    const reels = new FakeReels();
-    const controls = new FakeControls();
-    const game = new Game(server, reels, controls);
-    game.start();
+    const server = new FakeServer(50, response(0, 50));
+    const { game, reels } = setup(server);
 
     game.spin();
     expect(reels.startCount).toBe(0);

@@ -19,6 +19,7 @@ export interface GameConfig {
   startingBalanceCents: number;
   betLevelsCents: readonly number[];
   defaultBetIndex: number;
+  bigWinMultiplier: number;
   reelStrips: readonly (readonly SymbolId[])[];
   timing: SpinTiming;
 }
@@ -156,6 +157,7 @@ export const GAME_CONFIG: GameConfig = {
   startingBalanceCents: 100_000,
   betLevelsCents: [20, 40, 100, 200, 400, 1000, 2000],
   defaultBetIndex: 2,
+  bigWinMultiplier: 5,
   reelStrips,
   timing: {
     spinUpMs: 220,

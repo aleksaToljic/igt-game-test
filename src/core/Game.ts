@@ -19,19 +19,31 @@ export interface GameControls {
   setEnabled(enabled: boolean): void;
 }
 
+export interface WinCelebration {
+  celebrateBigWin(amountCents: number): void;
+  clear(): void;
+}
+
 export class Game {
   private readonly server: IGameServer;
   private readonly reels: ReelsController;
   private readonly controls: GameControls;
+  private readonly celebration: WinCelebration;
   private readonly wallet: Wallet;
   private readonly machine = new GameStateMachine();
   private stopTimer: ReturnType<typeof setTimeout> | undefined;
   private presentTimer: ReturnType<typeof setTimeout> | undefined;
 
-  constructor(server: IGameServer, reels: ReelsController, controls: GameControls) {
+  constructor(
+    server: IGameServer,
+    reels: ReelsController,
+    controls: GameControls,
+    celebration: WinCelebration,
+  ) {
     this.server = server;
     this.reels = reels;
     this.controls = controls;
+    this.celebration = celebration;
     const defaultBet = GAME_CONFIG.betLevelsCents[GAME_CONFIG.defaultBetIndex] ?? 0;
     this.wallet = new Wallet(server.getBalanceCents(), defaultBet);
   }
@@ -53,6 +65,7 @@ export class Game {
       return;
     }
     this.clearTimers();
+    this.celebration.clear();
     this.machine.enter("spinning");
     this.wallet.debitBet();
     this.controls.setBalance(this.wallet.getBalanceCents());
@@ -82,20 +95,24 @@ export class Game {
     this.wallet.setBalanceCents(response.balanceCents);
     this.controls.setBalance(this.wallet.getBalanceCents());
 
-    if (response.totalWinCents > 0) {
-      this.machine.enter("presenting");
-      this.controls.countWin(response.totalWinCents);
-      this.reels.presentWins(response.wins);
-      this.presentTimer = setTimeout(() => {
-        this.reels.clearWins();
-        this.machine.enter("idle");
-        this.controls.setEnabled(true);
-      }, GAME_CONFIG.timing.winPresentMs);
+    if (response.totalWinCents <= 0) {
+      this.machine.enter("idle");
+      this.controls.setEnabled(true);
       return;
     }
 
-    this.machine.enter("idle");
-    this.controls.setEnabled(true);
+    this.machine.enter("presenting");
+    this.controls.countWin(response.totalWinCents);
+    this.reels.presentWins(response.wins);
+    if (response.totalWinCents >= GAME_CONFIG.bigWinMultiplier * this.wallet.getBetCents()) {
+      this.celebration.celebrateBigWin(response.totalWinCents);
+    }
+    this.presentTimer = setTimeout(() => {
+      this.reels.clearWins();
+      this.celebration.clear();
+      this.machine.enter("idle");
+      this.controls.setEnabled(true);
+    }, GAME_CONFIG.timing.winPresentMs);
   }
 
   private recover(): void {
