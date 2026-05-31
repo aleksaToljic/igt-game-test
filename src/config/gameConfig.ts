@@ -6,6 +6,7 @@ export interface SpinTiming {
   reelStopStaggerMs: number;
   decelerateMs: number;
   bounceMs: number;
+  spinSpeed: number;
 }
 
 export interface GameConfig {
@@ -158,7 +159,8 @@ export const GAME_CONFIG: GameConfig = {
     spinUpMs: 220,
     minSpinMs: 520,
     reelStopStaggerMs: 180,
-    decelerateMs: 420,
+    decelerateMs: 600,
     bounceMs: 180,
+    spinSpeed: 3.2,
   },
 };

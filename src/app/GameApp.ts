@@ -1,12 +1,15 @@
 import { Application } from "pixi.js";
 import { GAME_CONFIG } from "../config/gameConfig";
 import type { SymbolId } from "../config/symbols";
+import { MockGameServer } from "../server/MockGameServer";
 import { atWrapped } from "../utils/arrays";
 import { ReelsView } from "../view/reels/ReelsView";
 
 export class GameApp {
   private readonly app = new Application();
+  private readonly server = new MockGameServer();
   private reels: ReelsView | undefined;
+  private spinning = false;
 
   async init(root: HTMLElement): Promise<void> {
     await this.app.init({
@@ -22,7 +25,42 @@ export class GameApp {
     this.app.stage.addChild(this.reels);
     this.layout();
 
+    this.app.ticker.add((ticker) => this.reels?.update(ticker.deltaMS));
     addEventListener("resize", () => this.layout());
+    addEventListener("keydown", (event) => {
+      if (event.code === "Space") {
+        event.preventDefault();
+        this.spin();
+      }
+    });
+    this.app.canvas.addEventListener("pointerdown", () => this.spin());
+  }
+
+  private spin(): void {
+    if (this.spinning || !this.reels) {
+      return;
+    }
+    const reels = this.reels;
+    this.spinning = true;
+    reels.startSpin();
+
+    const betCents = GAME_CONFIG.betLevelsCents[GAME_CONFIG.defaultBetIndex] ?? 0;
+    const startedAt = performance.now();
+    this.server
+      .getResponseData({ betCents })
+      .then((response) => {
+        const wait = Math.max(0, GAME_CONFIG.timing.minSpinMs - (performance.now() - startedAt));
+        window.setTimeout(() => {
+          reels.stop(response.grid, () => {
+            this.spinning = false;
+          });
+        }, wait);
+      })
+      .catch(() => {
+        reels.stop(buildInitialGrid(), () => {
+          this.spinning = false;
+        });
+      });
   }
 
   private layout(): void {

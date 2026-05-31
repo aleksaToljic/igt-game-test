@@ -23,7 +23,7 @@ export class ReelsView extends Container {
     this.addChild(this.frame, this.reelArea, this.windowMask);
 
     for (let reel = 0; reel < reelCount; reel += 1) {
-      const reelView = new Reel(grid[reel] ?? []);
+      const reelView = new Reel(GAME_CONFIG.reelStrips[reel] ?? [], grid[reel] ?? []);
       reelView.x = reel * (symbolSize + reelGap);
       this.reels.push(reelView);
       this.reelArea.addChild(reelView);
@@ -33,13 +33,33 @@ export class ReelsView extends Container {
     this.reelArea.mask = this.windowMask;
   }
 
-  setGrid(grid: readonly (readonly SymbolId[])[]): void {
-    for (let reel = 0; reel < this.reels.length; reel += 1) {
-      const reelView = this.reels[reel];
-      const column = grid[reel];
-      if (reelView && column) {
-        reelView.setColumn(column);
-      }
+  startSpin(): void {
+    for (const reel of this.reels) {
+      reel.startSpin();
+    }
+  }
+
+  stop(grid: readonly (readonly SymbolId[])[], onAllStopped: () => void): void {
+    let remaining = this.reels.length;
+    if (remaining === 0) {
+      onAllStopped();
+      return;
+    }
+    this.reels.forEach((reel, index) => {
+      window.setTimeout(() => {
+        reel.stopAt(grid[index] ?? [], () => {
+          remaining -= 1;
+          if (remaining === 0) {
+            onAllStopped();
+          }
+        });
+      }, index * GAME_CONFIG.timing.reelStopStaggerMs);
+    });
+  }
+
+  update(deltaMs: number): void {
+    for (const reel of this.reels) {
+      reel.update(deltaMs);
     }
   }
 
