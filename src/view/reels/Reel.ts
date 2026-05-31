@@ -61,6 +61,7 @@ export class Reel extends Container {
 
   stopAt(targetColumn: readonly SymbolId[], onStopped: () => void): void {
     if (this.phase !== "spinning" && this.phase !== "accelerating") {
+      onStopped();
       return;
     }
     const currentRotation = Math.floor(this.traveled / GAME_CONFIG.symbolSize);

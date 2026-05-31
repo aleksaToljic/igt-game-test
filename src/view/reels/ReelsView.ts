@@ -12,6 +12,7 @@ export class ReelsView extends Container {
   private readonly reelArea = new Container();
   private readonly frame = new Graphics();
   private readonly windowMask = new Graphics();
+  private readonly pendingStops: number[] = [];
 
   constructor(grid: readonly (readonly SymbolId[])[]) {
     super();
@@ -34,19 +35,21 @@ export class ReelsView extends Container {
   }
 
   startSpin(): void {
+    this.clearPendingStops();
     for (const reel of this.reels) {
       reel.startSpin();
     }
   }
 
   stop(grid: readonly (readonly SymbolId[])[], onAllStopped: () => void): void {
+    this.clearPendingStops();
     let remaining = this.reels.length;
     if (remaining === 0) {
       onAllStopped();
       return;
     }
     this.reels.forEach((reel, index) => {
-      window.setTimeout(() => {
+      const timer = window.setTimeout(() => {
         reel.stopAt(grid[index] ?? [], () => {
           remaining -= 1;
           if (remaining === 0) {
@@ -54,6 +57,7 @@ export class ReelsView extends Container {
           }
         });
       }, index * GAME_CONFIG.timing.reelStopStaggerMs);
+      this.pendingStops.push(timer);
     });
   }
 
@@ -61,6 +65,13 @@ export class ReelsView extends Container {
     for (const reel of this.reels) {
       reel.update(deltaMs);
     }
+  }
+
+  private clearPendingStops(): void {
+    for (const timer of this.pendingStops) {
+      window.clearTimeout(timer);
+    }
+    this.pendingStops.length = 0;
   }
 
   private drawFrame(): void {

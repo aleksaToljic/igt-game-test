@@ -1,3 +1,4 @@
+import { atWrapped } from "../utils/arrays";
 import { SYMBOL, type SymbolId } from "./symbols";
 
 export interface SpinTiming {
@@ -164,3 +165,19 @@ export const GAME_CONFIG: GameConfig = {
     spinSpeed: 3.2,
   },
 };
+
+export function initialGrid(): SymbolId[][] {
+  const grid: SymbolId[][] = [];
+  for (let reel = 0; reel < GAME_CONFIG.reelCount; reel += 1) {
+    const strip = GAME_CONFIG.reelStrips[reel];
+    if (!strip) {
+      continue;
+    }
+    const column: SymbolId[] = [];
+    for (let row = 0; row < GAME_CONFIG.rowCount; row += 1) {
+      column.push(atWrapped(strip, row));
+    }
+    grid.push(column);
+  }
+  return grid;
+}
