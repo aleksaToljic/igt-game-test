@@ -13,6 +13,8 @@ const PANEL_GAP = 24;
 const SCREEN_MARGIN = 48;
 const CORNER_MARGIN = 16;
 const BACKGROUND_URL = `${import.meta.env.BASE_URL}assets/casino-bg.png`;
+const SOUND_ON_URL = `${import.meta.env.BASE_URL}assets/sound-on.svg`;
+const SOUND_OFF_URL = `${import.meta.env.BASE_URL}assets/sound-off.svg`;
 
 export class GameApp {
   private readonly app = new Application();
@@ -37,7 +39,11 @@ export class GameApp {
     mountPoint.appendChild(this.app.canvas);
     this.app.stage.eventMode = "static";
 
-    const backgroundTexture = await Assets.load<Texture>(BACKGROUND_URL).catch(() => undefined);
+    const [backgroundTexture, soundOnTexture, soundOffTexture] = await Promise.all([
+      Assets.load<Texture>(BACKGROUND_URL).catch(() => undefined),
+      Assets.load<Texture>(SOUND_ON_URL).catch(() => undefined),
+      Assets.load<Texture>(SOUND_OFF_URL).catch(() => undefined),
+    ]);
     if (backgroundTexture) {
       this.background = new BackgroundView(backgroundTexture);
       this.app.stage.addChild(this.background);
@@ -55,9 +61,14 @@ export class GameApp {
     const overlay = new BigWinOverlay();
     this.app.stage.addChild(overlay);
 
-    const soundButton = new SoundButton(this.audio.isMuted(), () => {
-      soundButton.setMuted(this.audio.toggleMute());
-    });
+    const soundButton = new SoundButton(
+      soundOnTexture,
+      soundOffTexture,
+      this.audio.isMuted(),
+      () => {
+        soundButton.setMuted(this.audio.toggleMute());
+      },
+    );
     this.app.stage.addChild(soundButton);
 
     this.reels = reels;
