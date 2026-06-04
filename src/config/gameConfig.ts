@@ -171,7 +171,7 @@ export const GAME_CONFIG: GameConfig = {
     decelerateMs: 600,
     bounceMs: 180,
     spinSpeed: 3.2,
-    winPresentMs: 1700,
+    winPresentMs: 2400,
   },
 };
 

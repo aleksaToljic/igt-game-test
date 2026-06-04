@@ -1,4 +1,4 @@
-import { Container, Graphics, type Texture } from "pixi.js";
+import { Container, Graphics, type Spritesheet, type Texture, type Ticker } from "pixi.js";
 import { GAME_CONFIG } from "../../config/gameConfig";
 import type { SymbolId } from "../../config/symbols";
 import type { WinLineDTO } from "../../server/dto";
@@ -16,6 +16,7 @@ export class ReelsView extends Container {
   private readonly frame = new Graphics();
   private readonly windowMask = new Graphics();
   private readonly winLines = new Graphics();
+  private readonly bursts = new Container();
   private readonly winPresenter: WinPresenter;
   private readonly pendingStops: number[] = [];
   private readonly onReelStop: (() => void) | undefined;
@@ -25,6 +26,7 @@ export class ReelsView extends Container {
     grid: readonly (readonly SymbolId[])[],
     onReelStop?: () => void,
     symbolTextures?: ReadonlyMap<SymbolId, Texture>,
+    bangSheet?: Spritesheet,
   ) {
     super();
     this.onReelStop = onReelStop;
@@ -46,12 +48,18 @@ export class ReelsView extends Container {
       this.reels.push(reelView);
       this.reelArea.addChild(reelView);
     }
-    this.reelArea.addChild(this.winLines);
+    this.reelArea.addChild(this.winLines, this.bursts);
 
     this.windowMask.roundRect(0, 0, this.contentWidth, this.contentHeight, 8).fill(0xffffff);
     this.reelArea.mask = this.windowMask;
 
-    this.winPresenter = new WinPresenter(this.reels, this.winLines, new PulseWinAnimation());
+    this.winPresenter = new WinPresenter(
+      this.reels,
+      this.winLines,
+      new PulseWinAnimation(),
+      this.bursts,
+      bangSheet?.animations.bang,
+    );
   }
 
   startSpin(): void {
@@ -91,10 +99,11 @@ export class ReelsView extends Container {
     this.winPresenter.clear();
   }
 
-  update(deltaMs: number): void {
+  update(ticker: Ticker): void {
     for (const reel of this.reels) {
-      reel.update(deltaMs);
+      reel.update(ticker.deltaMS);
     }
+    this.winPresenter.update(ticker);
   }
 
   private clearPendingStops(): void {

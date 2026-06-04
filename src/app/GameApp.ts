@@ -1,4 +1,4 @@
-import { Application, Assets, Container, type Texture } from "pixi.js";
+import { Application, Assets, Container, type Spritesheet, type Texture } from "pixi.js";
 import { AudioManager } from "../audio/AudioManager";
 import { initialGrid } from "../config/gameConfig";
 import { SYMBOL, type SymbolId } from "../config/symbols";
@@ -19,6 +19,9 @@ const SOUND_OFF_URL = `${import.meta.env.BASE_URL}assets/sound-off.svg`;
 const WILD_URL = `${import.meta.env.BASE_URL}assets/wild.png`;
 const COIN_URL = `${import.meta.env.BASE_URL}assets/coin.svg`;
 const BADGE_URL = `${import.meta.env.BASE_URL}assets/badge.png`;
+const BIG_WIN_SPLASH_URL = `${import.meta.env.BASE_URL}assets/big-win/splash/big-win.json`;
+const BIG_WIN_TEXT_URL = `${import.meta.env.BASE_URL}assets/big-win/text/big-win-text.json`;
+const EXPLOSION_URL = `${import.meta.env.BASE_URL}assets/explosion/bang.json`;
 const VECTOR_SYMBOL_RESOLUTION = 8;
 
 export class GameApp {
@@ -51,6 +54,9 @@ export class GameApp {
       wildTexture,
       coinTexture,
       badgeTexture,
+      bigWinSplash,
+      bigWinText,
+      explosionSheet,
     ] = await Promise.all([
       Assets.load<Texture>(BACKGROUND_URL).catch(() => undefined),
       Assets.load<Texture>(SOUND_ON_URL).catch(() => undefined),
@@ -61,6 +67,9 @@ export class GameApp {
         data: { resolution: VECTOR_SYMBOL_RESOLUTION },
       }).catch(() => undefined),
       Assets.load<Texture>(BADGE_URL).catch(() => undefined),
+      Assets.load<Spritesheet>(BIG_WIN_SPLASH_URL).catch(() => undefined),
+      Assets.load<Spritesheet>(BIG_WIN_TEXT_URL).catch(() => undefined),
+      Assets.load<Spritesheet>(EXPLOSION_URL).catch(() => undefined),
     ]);
     const symbolTextures = new Map<SymbolId, Texture>();
     if (wildTexture) {
@@ -77,16 +86,28 @@ export class GameApp {
       this.app.stage.addChild(this.background);
     }
 
-    const reels = new ReelsView(initialGrid(), () => this.audio.playReelStop(), symbolTextures);
+    const reels = new ReelsView(
+      initialGrid(),
+      () => this.audio.playReelStop(),
+      symbolTextures,
+      explosionSheet,
+    );
     const controls = new ControlPanel(reels.contentWidth, {
-      onSpin: () => this.game?.spin(),
-      onBetChange: (betCents) => this.game?.setBet(betCents),
+      onSpin: () => {
+        this.audio.playClick();
+        this.game?.spin();
+      },
+      onBetChange: (betCents) => {
+        this.audio.playClick();
+        this.game?.setBet(betCents);
+      },
+      onCoinTick: () => this.audio.playCoin(),
     });
     controls.position.set(0, reels.contentHeight + PANEL_GAP);
     this.root.addChild(reels, controls);
     this.app.stage.addChild(this.root);
 
-    const overlay = new BigWinOverlay();
+    const overlay = new BigWinOverlay(bigWinSplash, bigWinText);
     this.app.stage.addChild(overlay);
 
     const soundButton = new SoundButton(
@@ -108,7 +129,10 @@ export class GameApp {
     this.game.start();
     this.layout();
 
-    this.app.ticker.add((ticker) => reels.update(ticker.deltaMS));
+    this.app.ticker.add((ticker) => {
+      reels.update(ticker);
+      overlay.update(ticker);
+    });
     this.app.renderer.on("resize", () => this.layout());
     addEventListener("keydown", (event) => {
       if (event.code === "Space") {

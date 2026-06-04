@@ -1,0 +1,132 @@
+{
+  "frames": {
+    "big-win-text-0.png": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 756,
+        "h": 257
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 756,
+        "h": 257
+      },
+      "sourceSize": {
+        "w": 756,
+        "h": 257
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "big-win-text-1.png": {
+      "frame": {
+        "x": 756,
+        "y": 0,
+        "w": 756,
+        "h": 257
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 756,
+        "h": 257
+      },
+      "sourceSize": {
+        "w": 756,
+        "h": 257
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "big-win-text-2.png": {
+      "frame": {
+        "x": 1512,
+        "y": 0,
+        "w": 755,
+        "h": 257
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 755,
+        "h": 257
+      },
+      "sourceSize": {
+        "w": 755,
+        "h": 257
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "big-win-text-3.png": {
+      "frame": {
+        "x": 2267,
+        "y": 0,
+        "w": 755,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 755,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 755,
+        "h": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  },
+  "animations": {
+    "big-win-text-animation": [
+      "big-win-text-3.png",
+      "big-win-text-2.png",
+      "big-win-text-0.png",
+      "big-win-text-1.png",
+      "big-win-text-0.png",
+      "big-win-text-1.png",
+      "big-win-text-0.png",
+      "big-win-text-1.png",
+      "big-win-text-0.png",
+      "big-win-text-1.png",
+      "big-win-text-0.png",
+      "big-win-text-1.png",
+      "big-win-text-0.png",
+      "big-win-text-1.png",
+      "big-win-text-0.png",
+      "big-win-text-2.png",
+      "big-win-text-3.png"
+    ]
+  },
+  "meta": {
+    "app": "http://free-tex-packer.com",
+    "version": "0.6.7",
+    "image": "big-win-text.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 3022,
+      "h": 257
+    },
+    "scale": 1
+  }
+}

@@ -12,10 +12,12 @@ const CAPTION_COLOR = 0x8a93a6;
 const WIN_COLOR = 0xfde047;
 const NEUTRAL_COLOR = 0xf4f4f5;
 const COUNT_UP_DURATION = 0.6;
+const COIN_TICK_FRAMES = 6;
 
 export interface ControlPanelCallbacks {
   onSpin: () => void;
   onBetChange: (betCents: number) => void;
+  onCoinTick?: () => void;
 }
 
 export class ControlPanel extends Container {
@@ -26,10 +28,12 @@ export class ControlPanel extends Container {
   private readonly betSelector: BetSelector;
   private readonly spinButton: SpinButton;
   private readonly winProxy = { value: 0 };
+  private readonly onCoinTick: (() => void) | undefined;
 
   constructor(width: number, callbacks: ControlPanelCallbacks) {
     super();
     this.panelWidth = width;
+    this.onCoinTick = callbacks.onCoinTick;
 
     const background = new Graphics();
     background
@@ -85,11 +89,19 @@ export class ControlPanel extends Container {
     gsap.killTweensOf(this.winProxy);
     this.winProxy.value = 0;
     this.win.setValueColor(cents > 0 ? WIN_COLOR : NEUTRAL_COLOR);
+    let framesSinceCoin = 0;
     gsap.to(this.winProxy, {
       value: cents,
       duration: COUNT_UP_DURATION,
       ease: "power1.out",
-      onUpdate: () => this.win.setValue(formatCents(Math.round(this.winProxy.value))),
+      onUpdate: () => {
+        this.win.setValue(formatCents(Math.round(this.winProxy.value)));
+        framesSinceCoin += 1;
+        if (cents > 0 && framesSinceCoin >= COIN_TICK_FRAMES) {
+          framesSinceCoin = 0;
+          this.onCoinTick?.();
+        }
+      },
     });
   }
 
