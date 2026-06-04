@@ -28,8 +28,8 @@ export const SYMBOLS: readonly SymbolDefinition[] = [
   { id: SYMBOL.queen, name: "queen", label: "Q", kind: "low", color: 0x34d399 },
   { id: SYMBOL.king, name: "king", label: "K", kind: "low", color: 0xfbbf24 },
   { id: SYMBOL.ace, name: "ace", label: "A", kind: "low", color: 0xf472b6 },
-  { id: SYMBOL.gem, name: "gem", label: "GEM", kind: "high", color: 0x22d3ee },
-  { id: SYMBOL.crown, name: "crown", label: "CRWN", kind: "high", color: 0xa78bfa },
+  { id: SYMBOL.gem, name: "coin", label: "COIN", kind: "high", color: 0x22d3ee },
+  { id: SYMBOL.crown, name: "badge", label: "BADGE", kind: "high", color: 0xa78bfa },
   { id: SYMBOL.seven, name: "seven", label: "7", kind: "high", color: 0xef4444 },
   { id: SYMBOL.wild, name: "wild", label: "WILD", kind: "wild", color: 0xfde047 },
 ];

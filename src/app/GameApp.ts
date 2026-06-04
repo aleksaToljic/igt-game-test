@@ -7,6 +7,8 @@ import { MockGameServer } from "../server/MockGameServer";
 import { BackgroundView } from "../view/BackgroundView";
 import { ReelsView } from "../view/reels/ReelsView";
 import { ControlPanel } from "../view/ui/ControlPanel";
+import { InfoButton } from "../view/ui/InfoButton";
+import { PaytableOverlay } from "../view/ui/PaytableOverlay";
 import { SoundButton } from "../view/ui/SoundButton";
 import { BigWinOverlay } from "../view/win/BigWinOverlay";
 
@@ -34,6 +36,8 @@ export class GameApp {
   private controls: ControlPanel | undefined;
   private overlay: BigWinOverlay | undefined;
   private soundButton: SoundButton | undefined;
+  private infoButton: InfoButton | undefined;
+  private paytable: PaytableOverlay | undefined;
   private game: Game | undefined;
 
   async init(mountPoint: HTMLElement): Promise<void> {
@@ -120,10 +124,16 @@ export class GameApp {
     );
     this.app.stage.addChild(soundButton);
 
+    const paytable = new PaytableOverlay(symbolTextures);
+    const infoButton = new InfoButton(() => paytable.toggle());
+    this.app.stage.addChild(infoButton, paytable);
+
     this.reels = reels;
     this.controls = controls;
     this.overlay = overlay;
     this.soundButton = soundButton;
+    this.infoButton = infoButton;
+    this.paytable = paytable;
 
     this.game = new Game(this.server, reels, controls, overlay, this.audio);
     this.game.start();
@@ -135,7 +145,11 @@ export class GameApp {
     });
     this.app.renderer.on("resize", () => this.layout());
     addEventListener("keydown", (event) => {
-      if (event.code === "Space") {
+      if (event.code === "Escape") {
+        this.paytable?.close();
+        return;
+      }
+      if (event.code === "Space" && !this.paytable?.isOpen()) {
         event.preventDefault();
         this.game?.spin();
       }
@@ -162,9 +176,14 @@ export class GameApp {
       Math.round((height - naturalHeight * scale) / 2),
     );
     this.overlay.resize(width, height);
-    if (this.soundButton) {
+    this.paytable?.resize(width, height);
+    if (this.soundButton && this.infoButton) {
       this.soundButton.position.set(
         width - CORNER_MARGIN - this.soundButton.buttonSize,
+        CORNER_MARGIN,
+      );
+      this.infoButton.position.set(
+        width - CORNER_MARGIN - this.soundButton.buttonSize - 12 - this.infoButton.buttonSize,
         CORNER_MARGIN,
       );
     }
