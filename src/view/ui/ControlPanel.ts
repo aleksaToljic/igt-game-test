@@ -21,7 +21,6 @@ export interface ControlPanelCallbacks {
 }
 
 export class ControlPanel extends Container {
-  readonly panelWidth: number;
   readonly panelHeight = HEIGHT;
   private readonly balance: StatDisplay;
   private readonly win: StatDisplay;
@@ -32,7 +31,6 @@ export class ControlPanel extends Container {
 
   constructor(width: number, callbacks: ControlPanelCallbacks) {
     super();
-    this.panelWidth = width;
     this.onCoinTick = callbacks.onCoinTick;
 
     const background = new Graphics();

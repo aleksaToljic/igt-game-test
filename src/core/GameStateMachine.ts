@@ -10,10 +10,6 @@ const TRANSITIONS: Readonly<Record<GameState, readonly GameState[]>> = {
 export class GameStateMachine {
   private state: GameState = "idle";
 
-  get current(): GameState {
-    return this.state;
-  }
-
   is(state: GameState): boolean {
     return this.state === state;
   }
