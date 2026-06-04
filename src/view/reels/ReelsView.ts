@@ -18,9 +18,11 @@ export class ReelsView extends Container {
   private readonly winLines = new Graphics();
   private readonly winPresenter: WinPresenter;
   private readonly pendingStops: number[] = [];
+  private readonly onReelStop: (() => void) | undefined;
 
-  constructor(grid: readonly (readonly SymbolId[])[]) {
+  constructor(grid: readonly (readonly SymbolId[])[], onReelStop?: () => void) {
     super();
+    this.onReelStop = onReelStop;
     const { reelCount, rowCount, symbolSize, reelGap } = GAME_CONFIG;
     this.contentWidth = reelCount * symbolSize + (reelCount - 1) * reelGap;
     this.contentHeight = rowCount * symbolSize;
@@ -60,6 +62,7 @@ export class ReelsView extends Container {
     this.reels.forEach((reel, index) => {
       const timer = window.setTimeout(() => {
         reel.stopAt(grid[index] ?? [], () => {
+          this.onReelStop?.();
           remaining -= 1;
           if (remaining === 0) {
             onAllStopped();

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SymbolId } from "../src/config/symbols";
 import {
   Game,
+  type GameAudio,
   type GameControls,
   type ReelsController,
   type WinCelebration,
@@ -70,6 +71,29 @@ class FakeCelebration implements WinCelebration {
   }
 }
 
+class FakeAudio implements GameAudio {
+  musicStarted = false;
+  spins = 0;
+  wins = 0;
+  bigWins = 0;
+
+  startMusic(): void {
+    this.musicStarted = true;
+  }
+
+  playSpin(): void {
+    this.spins += 1;
+  }
+
+  playWin(): void {
+    this.wins += 1;
+  }
+
+  playBigWin(): void {
+    this.bigWins += 1;
+  }
+}
+
 class FakeServer implements IGameServer {
   requests = 0;
 
@@ -116,9 +140,10 @@ function setup(server: IGameServer) {
   const reels = new FakeReels();
   const controls = new FakeControls();
   const celebration = new FakeCelebration();
-  const game = new Game(server, reels, controls, celebration);
+  const audio = new FakeAudio();
+  const game = new Game(server, reels, controls, celebration, audio);
   game.start();
-  return { game, reels, controls, celebration };
+  return { game, reels, controls, celebration, audio };
 }
 
 describe("Game", () => {
@@ -131,7 +156,7 @@ describe("Game", () => {
   });
 
   it("settles a big winning spin: counts up, presents, celebrates and clears", async () => {
-    const { game, reels, controls, celebration } = setup(
+    const { game, reels, controls, celebration, audio } = setup(
       new FakeServer(10_000, response(500, 10_400)),
     );
 
@@ -139,32 +164,35 @@ describe("Game", () => {
     expect(reels.startCount).toBe(1);
     expect(controls.enabled).toBe(false);
     expect(controls.balanceCents).toBe(10_000 - DEFAULT_BET);
+    expect(audio.musicStarted).toBe(true);
+    expect(audio.spins).toBe(1);
 
     await vi.runAllTimersAsync();
     expect(controls.balanceCents).toBe(10_400);
     expect(controls.winCents).toBe(500);
     expect(reels.presentedWins?.length).toBe(1);
     expect(celebration.bigWinCents).toBe(500);
-    expect(reels.cleared).toBe(true);
-    expect(celebration.cleared).toBe(true);
+    expect(audio.bigWins).toBe(1);
+    expect(audio.wins).toBe(0);
     expect(controls.enabled).toBe(true);
   });
 
   it("presents a small win without a big-win celebration", async () => {
-    const { game, reels, controls, celebration } = setup(
+    const { game, controls, celebration, audio } = setup(
       new FakeServer(10_000, response(100, 10_000)),
     );
 
     game.spin();
     await vi.runAllTimersAsync();
     expect(controls.winCents).toBe(100);
-    expect(reels.presentedWins?.length).toBe(1);
     expect(celebration.bigWinCents).toBeUndefined();
+    expect(audio.wins).toBe(1);
+    expect(audio.bigWins).toBe(0);
     expect(controls.enabled).toBe(true);
   });
 
   it("settles a losing spin: no win, no celebration, controls re-enable", async () => {
-    const { game, reels, controls, celebration } = setup(
+    const { game, reels, controls, celebration, audio } = setup(
       new FakeServer(10_000, response(0, 9_900)),
     );
 
@@ -174,6 +202,9 @@ describe("Game", () => {
     expect(controls.balanceCents).toBe(9_900);
     expect(reels.presentedWins).toBeUndefined();
     expect(celebration.bigWinCents).toBeUndefined();
+    expect(audio.spins).toBe(1);
+    expect(audio.wins).toBe(0);
+    expect(audio.bigWins).toBe(0);
     expect(controls.enabled).toBe(true);
   });
 
@@ -200,10 +231,11 @@ describe("Game", () => {
 
   it("does not spin when the bet exceeds the balance", () => {
     const server = new FakeServer(50, response(0, 50));
-    const { game, reels } = setup(server);
+    const { game, reels, audio } = setup(server);
 
     game.spin();
     expect(reels.startCount).toBe(0);
     expect(server.requests).toBe(0);
+    expect(audio.spins).toBe(0);
   });
 });

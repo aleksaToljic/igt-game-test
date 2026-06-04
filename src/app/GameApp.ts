@@ -1,24 +1,29 @@
 import { Application, Assets, Container, type Texture } from "pixi.js";
+import { AudioManager } from "../audio/AudioManager";
 import { initialGrid } from "../config/gameConfig";
 import { Game } from "../core/Game";
 import { MockGameServer } from "../server/MockGameServer";
 import { BackgroundView } from "../view/BackgroundView";
 import { ReelsView } from "../view/reels/ReelsView";
 import { ControlPanel } from "../view/ui/ControlPanel";
+import { SoundButton } from "../view/ui/SoundButton";
 import { BigWinOverlay } from "../view/win/BigWinOverlay";
 
 const PANEL_GAP = 24;
 const SCREEN_MARGIN = 48;
+const CORNER_MARGIN = 16;
 const BACKGROUND_URL = `${import.meta.env.BASE_URL}assets/casino-bg.png`;
 
 export class GameApp {
   private readonly app = new Application();
   private readonly server = new MockGameServer();
+  private readonly audio = new AudioManager(import.meta.env.BASE_URL);
   private readonly root = new Container();
   private background: BackgroundView | undefined;
   private reels: ReelsView | undefined;
   private controls: ControlPanel | undefined;
   private overlay: BigWinOverlay | undefined;
+  private soundButton: SoundButton | undefined;
   private game: Game | undefined;
 
   async init(mountPoint: HTMLElement): Promise<void> {
@@ -38,7 +43,7 @@ export class GameApp {
       this.app.stage.addChild(this.background);
     }
 
-    const reels = new ReelsView(initialGrid());
+    const reels = new ReelsView(initialGrid(), () => this.audio.playReelStop());
     const controls = new ControlPanel(reels.contentWidth, {
       onSpin: () => this.game?.spin(),
       onBetChange: (betCents) => this.game?.setBet(betCents),
@@ -50,11 +55,17 @@ export class GameApp {
     const overlay = new BigWinOverlay();
     this.app.stage.addChild(overlay);
 
+    const soundButton = new SoundButton(this.audio.isMuted(), () => {
+      soundButton.setMuted(this.audio.toggleMute());
+    });
+    this.app.stage.addChild(soundButton);
+
     this.reels = reels;
     this.controls = controls;
     this.overlay = overlay;
+    this.soundButton = soundButton;
 
-    this.game = new Game(this.server, reels, controls, overlay);
+    this.game = new Game(this.server, reels, controls, overlay, this.audio);
     this.game.start();
     this.layout();
 
@@ -88,5 +99,11 @@ export class GameApp {
       Math.round((height - naturalHeight * scale) / 2),
     );
     this.overlay.resize(width, height);
+    if (this.soundButton) {
+      this.soundButton.position.set(
+        width - CORNER_MARGIN - this.soundButton.buttonSize,
+        CORNER_MARGIN,
+      );
+    }
   }
 }

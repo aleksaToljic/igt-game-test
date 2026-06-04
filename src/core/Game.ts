@@ -24,11 +24,19 @@ export interface WinCelebration {
   clear(): void;
 }
 
+export interface GameAudio {
+  startMusic(): void;
+  playSpin(): void;
+  playWin(): void;
+  playBigWin(): void;
+}
+
 export class Game {
   private readonly server: IGameServer;
   private readonly reels: ReelsController;
   private readonly controls: GameControls;
   private readonly celebration: WinCelebration;
+  private readonly audio: GameAudio;
   private readonly wallet: Wallet;
   private readonly machine = new GameStateMachine();
   private stopTimer: ReturnType<typeof setTimeout> | undefined;
@@ -39,11 +47,13 @@ export class Game {
     reels: ReelsController,
     controls: GameControls,
     celebration: WinCelebration,
+    audio: GameAudio,
   ) {
     this.server = server;
     this.reels = reels;
     this.controls = controls;
     this.celebration = celebration;
+    this.audio = audio;
     const defaultBet = GAME_CONFIG.betLevelsCents[GAME_CONFIG.defaultBetIndex] ?? 0;
     this.wallet = new Wallet(server.getBalanceCents(), defaultBet);
   }
@@ -72,6 +82,8 @@ export class Game {
     this.controls.setWin(0);
     this.controls.setEnabled(false);
     this.reels.startSpin();
+    this.audio.startMusic();
+    this.audio.playSpin();
 
     const startedAt = performance.now();
     this.server
@@ -106,6 +118,9 @@ export class Game {
     this.reels.presentWins(response.wins);
     if (response.totalWinCents >= GAME_CONFIG.bigWinMultiplier * this.wallet.getBetCents()) {
       this.celebration.celebrateBigWin(response.totalWinCents);
+      this.audio.playBigWin();
+    } else {
+      this.audio.playWin();
     }
     this.presentTimer = setTimeout(() => {
       this.reels.clearWins();
