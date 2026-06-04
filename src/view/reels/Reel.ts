@@ -1,5 +1,5 @@
 import { gsap } from "gsap";
-import { Container } from "pixi.js";
+import { Container, type Texture } from "pixi.js";
 import { GAME_CONFIG } from "../../config/gameConfig";
 import type { SymbolId } from "../../config/symbols";
 import { atWrapped } from "../../utils/arrays";
@@ -19,6 +19,7 @@ function easeOutCubic(progress: number): number {
 export class Reel extends Container {
   private readonly strip: readonly SymbolId[];
   private readonly cells: SymbolView[] = [];
+  private readonly symbolTextures: ReadonlyMap<SymbolId, Texture> | undefined;
 
   private phase: ReelPhase = "idle";
   private traveled = 0;
@@ -35,12 +36,17 @@ export class Reel extends Container {
   private targetColumn: readonly SymbolId[] = [];
   private onStopped: (() => void) | undefined;
 
-  constructor(strip: readonly SymbolId[], initialColumn: readonly SymbolId[]) {
+  constructor(
+    strip: readonly SymbolId[],
+    initialColumn: readonly SymbolId[],
+    symbolTextures?: ReadonlyMap<SymbolId, Texture>,
+  ) {
     super();
     this.strip = strip;
+    this.symbolTextures = symbolTextures;
     const cellCount = GAME_CONFIG.rowCount + BUFFER_ROWS;
     for (let index = 0; index < cellCount; index += 1) {
-      const cell = new SymbolView(0);
+      const cell = new SymbolView(0, this.symbolTextures);
       this.cells.push(cell);
       this.addChild(cell);
     }

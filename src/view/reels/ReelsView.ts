@@ -1,4 +1,4 @@
-import { Container, Graphics } from "pixi.js";
+import { Container, Graphics, type Texture } from "pixi.js";
 import { GAME_CONFIG } from "../../config/gameConfig";
 import type { SymbolId } from "../../config/symbols";
 import type { WinLineDTO } from "../../server/dto";
@@ -19,10 +19,16 @@ export class ReelsView extends Container {
   private readonly winPresenter: WinPresenter;
   private readonly pendingStops: number[] = [];
   private readonly onReelStop: (() => void) | undefined;
+  private readonly symbolTextures: ReadonlyMap<SymbolId, Texture> | undefined;
 
-  constructor(grid: readonly (readonly SymbolId[])[], onReelStop?: () => void) {
+  constructor(
+    grid: readonly (readonly SymbolId[])[],
+    onReelStop?: () => void,
+    symbolTextures?: ReadonlyMap<SymbolId, Texture>,
+  ) {
     super();
     this.onReelStop = onReelStop;
+    this.symbolTextures = symbolTextures;
     const { reelCount, rowCount, symbolSize, reelGap } = GAME_CONFIG;
     this.contentWidth = reelCount * symbolSize + (reelCount - 1) * reelGap;
     this.contentHeight = rowCount * symbolSize;
@@ -31,7 +37,11 @@ export class ReelsView extends Container {
     this.addChild(this.frame, this.reelArea, this.windowMask);
 
     for (let reel = 0; reel < reelCount; reel += 1) {
-      const reelView = new Reel(GAME_CONFIG.reelStrips[reel] ?? [], grid[reel] ?? []);
+      const reelView = new Reel(
+        GAME_CONFIG.reelStrips[reel] ?? [],
+        grid[reel] ?? [],
+        this.symbolTextures,
+      );
       reelView.x = reel * (symbolSize + reelGap);
       this.reels.push(reelView);
       this.reelArea.addChild(reelView);
