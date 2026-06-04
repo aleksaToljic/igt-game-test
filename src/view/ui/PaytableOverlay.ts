@@ -110,7 +110,7 @@ export class PaytableOverlay extends Container {
       text: [
         "WILD substitutes for every symbol.",
         `${PAYLINES.length} lines pay left to right from reel 1.`,
-        "Line win = payout shown above × bet per line.",
+        "Line win = the payout above times the bet per line.",
         "",
         "How to play: pick a BET, then press SPIN.",
       ].join("\n"),
