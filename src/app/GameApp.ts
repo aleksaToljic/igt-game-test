@@ -17,6 +17,9 @@ const BACKGROUND_URL = `${import.meta.env.BASE_URL}assets/casino-bg.png`;
 const SOUND_ON_URL = `${import.meta.env.BASE_URL}assets/sound-on.svg`;
 const SOUND_OFF_URL = `${import.meta.env.BASE_URL}assets/sound-off.svg`;
 const WILD_URL = `${import.meta.env.BASE_URL}assets/wild.png`;
+const COIN_URL = `${import.meta.env.BASE_URL}assets/coin.svg`;
+const BADGE_URL = `${import.meta.env.BASE_URL}assets/badge.png`;
+const VECTOR_SYMBOL_RESOLUTION = 8;
 
 export class GameApp {
   private readonly app = new Application();
@@ -41,15 +44,33 @@ export class GameApp {
     mountPoint.appendChild(this.app.canvas);
     this.app.stage.eventMode = "static";
 
-    const [backgroundTexture, soundOnTexture, soundOffTexture, wildTexture] = await Promise.all([
+    const [
+      backgroundTexture,
+      soundOnTexture,
+      soundOffTexture,
+      wildTexture,
+      coinTexture,
+      badgeTexture,
+    ] = await Promise.all([
       Assets.load<Texture>(BACKGROUND_URL).catch(() => undefined),
       Assets.load<Texture>(SOUND_ON_URL).catch(() => undefined),
       Assets.load<Texture>(SOUND_OFF_URL).catch(() => undefined),
       Assets.load<Texture>(WILD_URL).catch(() => undefined),
+      Assets.load<Texture>({
+        src: COIN_URL,
+        data: { resolution: VECTOR_SYMBOL_RESOLUTION },
+      }).catch(() => undefined),
+      Assets.load<Texture>(BADGE_URL).catch(() => undefined),
     ]);
     const symbolTextures = new Map<SymbolId, Texture>();
     if (wildTexture) {
       symbolTextures.set(SYMBOL.wild, wildTexture);
+    }
+    if (coinTexture) {
+      symbolTextures.set(SYMBOL.gem, coinTexture);
+    }
+    if (badgeTexture) {
+      symbolTextures.set(SYMBOL.crown, badgeTexture);
     }
     if (backgroundTexture) {
       this.background = new BackgroundView(backgroundTexture);
