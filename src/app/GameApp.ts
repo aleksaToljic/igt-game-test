@@ -1,18 +1,21 @@
-import { Application, Container } from "pixi.js";
+import { Application, Assets, Container, type Texture } from "pixi.js";
 import { initialGrid } from "../config/gameConfig";
 import { Game } from "../core/Game";
 import { MockGameServer } from "../server/MockGameServer";
+import { BackgroundView } from "../view/BackgroundView";
 import { ReelsView } from "../view/reels/ReelsView";
 import { ControlPanel } from "../view/ui/ControlPanel";
 import { BigWinOverlay } from "../view/win/BigWinOverlay";
 
 const PANEL_GAP = 24;
 const SCREEN_MARGIN = 48;
+const BACKGROUND_URL = `${import.meta.env.BASE_URL}assets/casino-bg.png`;
 
 export class GameApp {
   private readonly app = new Application();
   private readonly server = new MockGameServer();
   private readonly root = new Container();
+  private background: BackgroundView | undefined;
   private reels: ReelsView | undefined;
   private controls: ControlPanel | undefined;
   private overlay: BigWinOverlay | undefined;
@@ -28,6 +31,12 @@ export class GameApp {
     });
     mountPoint.appendChild(this.app.canvas);
     this.app.stage.eventMode = "static";
+
+    const backgroundTexture = await Assets.load<Texture>(BACKGROUND_URL).catch(() => undefined);
+    if (backgroundTexture) {
+      this.background = new BackgroundView(backgroundTexture);
+      this.app.stage.addChild(this.background);
+    }
 
     const reels = new ReelsView(initialGrid());
     const controls = new ControlPanel(reels.contentWidth, {
@@ -63,9 +72,11 @@ export class GameApp {
     if (!this.reels || !this.controls || !this.overlay) {
       return;
     }
+    const { width, height } = this.app.screen;
+    this.background?.resize(width, height);
+
     const naturalWidth = this.reels.contentWidth;
     const naturalHeight = this.reels.contentHeight + PANEL_GAP + this.controls.panelHeight;
-    const { width, height } = this.app.screen;
     const scale = Math.min(
       1,
       (width - SCREEN_MARGIN) / naturalWidth,
