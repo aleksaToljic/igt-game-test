@@ -1,7 +1,5 @@
 import { Sound } from "@pixi/sound";
 
-const MUTE_KEY = "igt-slot-muted";
-
 export class AudioManager {
   private readonly spinSound: Sound;
   private readonly reelStopSound: Sound;
@@ -26,7 +24,7 @@ export class AudioManager {
       volume: 0.25,
       preload: false,
     });
-    this.muted = localStorage.getItem(MUTE_KEY) === "true";
+    this.muted = true;
   }
 
   startMusic(): void {
@@ -67,7 +65,6 @@ export class AudioManager {
 
   toggleMute(): boolean {
     this.muted = !this.muted;
-    localStorage.setItem(MUTE_KEY, String(this.muted));
     if (this.muted) {
       this.music.stop();
       this.musicStarted = false;
